@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OfferGuard AI — Tactical Cyber-Ops Inspector</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#050914',
+                            card: '#0d1527',
+                            border: '#1a2942',
+                            neonGreen: '#00ff9d',
+                            neonRed: '#ff2e63',
+                            neonYellow: '#ffb703',
+                            neonBlue: '#00b4d8',
+                            accent: '#3a86ff'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['Fira Code', 'JetBrains Mono', 'monospace'],
+                        sans: ['Inter', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'neon-green': '0 0 15px rgba(0, 255, 157, 0.3)',
+                        'neon-red': '0 0 15px rgba(255, 46, 99, 0.3)',
+                        'neon-yellow': '0 0 15px rgba(255, 183, 3, 0.3)',
+                        'neon-blue': '0 0 15px rgba(0, 180, 216, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tesseract.js for Local OCR fallback -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #050914;
+            color: #e2e8f0;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(0, 180, 216, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(255, 46, 99, 0.04) 0%, transparent 40%),
+                linear-gradient(to right, rgba(26, 41, 66, 0.15) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(26, 41, 66, 0.15) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 30px 30px, 30px 30px;
+        }
+
+        .scanlines {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0, 0, 0, 0.25) 50%,
+                rgba(0, 0, 0, 0.25)
+            );
+            background-size: 100% 4px;
+        }
+
+        .radar-sweep {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, transparent 0deg, transparent 270deg, rgba(0, 255, 157, 0.4) 360deg);
+            animation: radarRotate 3s linear infinite;
+        }
+
+        @keyframes radarRotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .pulse-glow {
+            animation: pulseGlow 2s infinite alternate;
+        }
+
+        @keyframes pulseGlow {
+            0% { opacity: 0.4; }
+            100% { opacity: 0.9; }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #080d1a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00b4d8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- Header / Navbar -->
+    <header class="border-b border-cyber-border bg-cyber-card/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-cyber-border/80 border border-cyber-neonBlue/40 flex items-center justify-center text-cyber-neonBlue shadow-neon-blue">
+                    <i class="fa-solid fa-shield-halved text-xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold font-mono text-lg text-white tracking-wide">OFFERGUARD</span>
+                        <span class="text-xs px-2 py-0.5 rounded border border-cyber-neonBlue/30 bg-cyber-neonBlue/10 text-cyber-neonBlue font-mono">v2.5 PRO</span>
+                    </div>
+                    <p class="text-xs text-gray-400 font-mono hidden sm:block">Tactical Cyber-Ops Threat Inspection & Real-time Safeguard</p>
+                </div>
+            </div>
+
+            <!-- Status Indicators -->
+            <div class="flex items-center space-x-3 sm:space-x-4">
+                <!-- Engine Badge -->
+                <div id="engineBadge" class="flex items-center space-x-2 bg-cyber-bg border border-cyber-border px-3 py-1.5 rounded-full text-xs font-mono">
+                    <span class="w-2 h-2 rounded-full bg-cyber-neonGreen animate-pulse"></span>
+                    <span class="text-gray-300 hidden md:inline">Engine:</span>
+                    <span id="engineStatusText" class="text-cyber-neonGreen font-semibold">Gemini AI / Hybrid</span>
+                </div>
+
+                <!-- Auto Monitor Badge -->
+                <div id="autoMonitorBadge" class="hidden sm:flex items-center space-x-2 bg-cyber-bg border border-cyber-border px-3 py-1.5 rounded-full text-xs font-mono">
+                    <span id="autoMonitorDot" class="w-2 h-2 rounded-full bg-gray-500"></span>
+                    <span class="text-gray-300">Live Monitor:</span>
+                    <span id="autoMonitorText" class="text-gray-400 font-semibold">OFF</span>
+                </div>
+
+                <!-- Settings / Key Modal Trigger -->
+                <button onclick="toggleSettingsModal()" class="p-2 rounded-lg bg-cyber-bg border border-cyber-border text-gray-400 hover:text-white hover:border-cyber-neonBlue transition-colors">
+                    <i class="fa-solid fa-sliders"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Live Status Ticker -->
+    <div class="bg-cyber-card/60 border-b border-cyber-border/50 py-1.5 px-4 text-xs font-mono flex items-center justify-between text-gray-400">
+        <div class="flex items-center space-x-3 overflow-hidden">
+            <span class="text-cyber-neonGreen font-semibold flex items-center space-x-1 shrink-0">
+                <i class="fa-solid fa-radar text-xs"></i>
+                <span>LIVE FEED:</span>
+            </span>
+            <div class="overflow-hidden relative w-full">
+                <span id="liveTickerText" class="inline-block whitespace-nowrap animate-pulse text-gray-300">
+                    System active. Ready for manual inspection or automatic clipboard / stream monitoring.
+                </span>
+            </div>
+        </div>
+        <div class="shrink-0 pl-4 border-l border-cyber-border/50 hidden md:block">
+            <span class="text-gray-500">Heuristics Engine:</span> <span class="text-cyber-neonBlue">Active v4.12</span>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- LEFT COLUMN: Input Modes & Controls (7 Cols) -->
+        <section class="lg:col-span-7 flex flex-col space-y-6">
+
+            <!-- Mode Selector Tabs -->
+            <div class="bg-cyber-card border border-cyber-border rounded-xl p-1.5 flex space-x-1">
+                <button id="tabManualBtn" onclick="switchMode('manual')" class="flex-1 py-2.5 px-4 rounded-lg font-mono text-xs sm:text-sm font-semibold flex items-center justify-center space-x-2 transition-all bg-cyber-border text-white shadow-md">
+                    <i class="fa-solid fa-keyboard text-cyber-neonBlue"></i>
+                    <span>MANUAL INSPECTION</span>
+                </button>
+                <button id="tabAutoBtn" onclick="switchMode('auto')" class="flex-1 py-2.5 px-4 rounded-lg font-mono text-xs sm:text-sm font-semibold flex items-center justify-center space-x-2 transition-all text-gray-400 hover:text-white hover:bg-cyber-bg/50">
+                    <i class="fa-solid fa-tower-broadcast text-cyber-neonGreen"></i>
+                    <span>AUTO-MONITOR FEED</span>
+                    <span id="autoBadgeCount" class="hidden px-1.5 py-0.5 text-[10px] rounded-full bg-cyber-neonRed text-white font-bold">LIVE</span>
+                </button>
+            </div>
+
+            <!-- ================= MANUAL INPUT PANEL ================= -->
+            <div id="manualPanel" class="flex flex-col space-y-5 bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-xl relative">
+                
+                <!-- Quick Preset Loaders -->
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-cyber-border/60 pb-3">
+                    <span class="text-xs font-mono text-gray-400 flex items-center space-x-1">
+                        <i class="fa-solid fa-bolt text-cyber-neonYellow"></i>
+                        <span>TEST PRESETS:</span>
+                    </span>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="loadPreset('scam_job')" class="px-2.5 py-1 text-xs font-mono rounded bg-cyber-neonRed/10 border border-cyber-neonRed/30 text-cyber-neonRed hover:bg-cyber-neonRed/20 transition">
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i>Scam Offer
+                        </button>
+                        <button onclick="loadPreset('scam_sms')" class="px-2.5 py-1 text-xs font-mono rounded bg-cyber-neonYellow/10 border border-cyber-neonYellow/30 text-cyber-neonYellow hover:bg-cyber-neonYellow/20 transition">
+                            <i class="fa-solid fa-comment-dollar mr-1"></i>Bank SMS
+                        </button>
+                        <button onclick="loadPreset('legit')" class="px-2.5 py-1 text-xs font-mono rounded bg-cyber-neonGreen/10 border border-cyber-neonGreen/30 text-cyber-neonGreen hover:bg-cyber-neonGreen/20 transition">
+                            <i class="fa-solid fa-circle-check mr-1"></i>Legit Job
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Input Sub-Tabs: Text vs Screenshot/OCR -->
+                <div class="flex items-center justify-between text-xs font-mono">
+                    <label class="text-gray-300 font-semibold flex items-center space-x-2">
+                        <i class="fa-solid fa-file-lines text-cyber-neonBlue"></i>
+                        <span>INSPECT TARGET CONTENT:</span>
+                    </label>
+                    <button onclick="clearManualInputs()" class="text-gray-400 hover:text-cyber-neonRed transition flex items-center space-x-1">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>CLEAR</span>
+                    </button>
+                </div>
+
+                <!-- Textarea -->
+                <div>
+                    <textarea id="manualText" rows="6" placeholder="Paste suspected job offer email, SMS message, prize claim code, Telegram chat, or contract text here..." class="w-full bg-cyber-bg border border-cyber-border rounded-lg p-3 font-mono text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-cyber-neonBlue focus:ring-1 focus:ring-cyber-neonBlue transition"></textarea>
+                </div>
+
+                <!-- Optional URL Field -->
+                <div class="flex items-center space-x-2 bg-cyber-bg border border-cyber-border rounded-lg px-3 py-2">
+                    <i class="fa-solid fa-link text-gray-500 text-sm"></i>
+                    <input type="url" id="manualUrl" placeholder="Optional offer / link URL (e.g. https://bit.ly/claim-job-now)" class="w-full bg-transparent font-mono text-xs text-gray-200 placeholder-gray-500 focus:outline-none">
+                </div>
+
+                <!-- Drag & Drop OCR Screenshot Area -->
+                <div id="dropZone" class="border-2 border-dashed border-cyber-border rounded-lg p-4 text-center cursor-pointer hover:border-cyber-neonBlue/50 transition bg-cyber-bg/40 relative group">
+                    <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+                    <div id="dropZoneContent" class="flex flex-col items-center justify-center space-y-2">
+                        <i class="fa-solid fa-cloud-arrow-up text-2xl text-gray-400 group-hover:text-cyber-neonBlue transition"></i>
+                        <p class="text-xs font-mono text-gray-300">
+                            Drag & drop offer screenshot or <span class="text-cyber-neonBlue hover:underline">browse file</span>
+                        </p>
+                        <p class="text-[10px] font-mono text-gray-500">Supports PNG, JPG, WEBP — AI/OCR Text Extraction</p>
+                    </div>
+                    <!-- Image Preview Container -->
+                    <div id="imagePreviewContainer" class="hidden relative flex flex-col items-center space-y-2">
+                        <img id="imagePreview" src="" alt="Screenshot Preview" class="max-h-32 rounded border border-cyber-border object-contain">
+                        <button onclick="removeImage(event)" class="absolute top-0 right-0 bg-cyber-neonRed text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-700">
+                            &times;
+                        </button>
+                        <div id="ocrStatus" class="text-[11px] font-mono text-cyber-neonYellow">
+                            <i class="fa-solid fa-spinner fa-spin mr-1"></i> Extracting text from image...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analyze Trigger Button -->
+                <button id="analyzeBtn" onclick="runManualAnalysis()" class="w-full py-3 rounded-lg font-mono font-bold text-sm bg-gradient-to-r from-cyber-neonBlue to-cyber-accent hover:opacity-90 text-cyber-bg shadow-neon-blue flex items-center justify-center space-x-2 transition">
+                    <i class="fa-solid fa-microscope text-base"></i>
+                    <span>EXECUTE TACTICAL INSPECTION</span>
+                </button>
+            </div>
+
+            <!-- ================= AUTOMATIC MONITORING PANEL ================= -->
+            <div id="autoPanel" class="hidden flex-col space-y-5 bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-xl">
+                
+                <!-- Controls Header -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cyber-border/60 pb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 rounded-full bg-cyber-neonGreen animate-ping"></div>
+                        <div>
+                            <h3 class="font-mono text-sm font-bold text-white">LIVE AUTO-MONITOR MATRIX</h3>
+                            <p class="text-xs text-gray-400">Interacts with system clipboard & incoming telemetry stream</p>
+                        </div>
+                    </div>
+
+                    <!-- Toggle Switches -->
+                    <div class="flex items-center space-x-4">
+                        <!-- Clipboard Switch -->
+                        <label class="flex items-center space-x-2 cursor-pointer bg-cyber-bg border border-cyber-border px-3 py-1.5 rounded-lg text-xs font-mono">
+                            <span class="text-gray-300">Clipboard Sniffer</span>
+                            <div class="relative inline-block w-8 h-4 align-middle select-none">
+                                <input type="checkbox" id="clipToggle" onchange="toggleClipboardMonitoring()" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-2 appearance-none cursor-pointer border-gray-600 transition-transform duration-200 ease-in left-0 checked:right-0 checked:left-auto checked:bg-cyber-neonGreen">
+                                <label for="clipToggle" class="toggle-label block overflow-hidden h-4 rounded-full bg-gray-700 cursor-pointer"></label>
+                            </div>
+                        </label>
+
+                        <!-- Auto Stream Simulation Toggle -->
+                        <button id="simStreamBtn" onclick="toggleStreamSimulation()" class="px-3 py-1.5 rounded-lg text-xs font-mono border border-cyber-neonGreen/40 bg-cyber-neonGreen/10 text-cyber-neonGreen hover:bg-cyber-neonGreen/20 transition">
+                            <i class="fa-solid fa-play mr-1"></i>Start Stream
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Simulation Dispatch Row -->
+                <div class="flex items-center justify-between bg-cyber-bg/60 border border-cyber-border p-3 rounded-lg text-xs font-mono">
+                    <span class="text-gray-400">Inject Simulated Incident:</span>
+                    <div class="flex space-x-2">
+                        <button onclick="injectSimulatedMessage('high_risk')" class="px-2 py-1 bg-cyber-neonRed/20 text-cyber-neonRed border border-cyber-neonRed/30 rounded hover:bg-cyber-neonRed/30 transition">
+                            + Crypto Offer Scam
+                        </button>
+                        <button onclick="injectSimulatedMessage('med_risk')" class="px-2 py-1 bg-cyber-neonYellow/20 text-cyber-neonYellow border border-cyber-neonYellow/30 rounded hover:bg-cyber-neonYellow/30 transition">
+                            + Bank Urgent Code
+                        </button>
+                        <button onclick="injectSimulatedMessage('safe')" class="px-2 py-1 bg-cyber-neonGreen/20 text-cyber-neonGreen border border-cyber-neonGreen/30 rounded hover:bg-cyber-neonGreen/30 transition">
+                            + Legitimate Hiring
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Incoming Live Stream Feed Box -->
+                <div class="flex flex-col space-y-2">
+                    <div class="flex items-center justify-between text-xs font-mono text-gray-400">
+                        <span>LIVE INCIDENT STREAM (<span id="feedCount">0</span>)</span>
+                        <button onclick="clearStreamFeed()" class="hover:text-cyber-neonRed transition">Clear Feed</button>
+                    </div>
+
+                    <div id="streamContainer" class="h-80 overflow-y-auto space-y-2.5 pr-1">
+                        <!-- Feed Empty State -->
+                        <div id="streamEmptyState" class="h-full flex flex-col items-center justify-center text-gray-500 font-mono text-xs py-10">
+                            <i class="fa-solid fa-satellite-dish text-3xl mb-2 text-cyber-border"></i>
+                            <p>Live Monitoring Feed Idle.</p>
+                            <p class="text-[10px] text-gray-600">Toggle "Start Stream" or "Clipboard Sniffer" above to auto-detect threats.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- RIGHT COLUMN: Analysis Engine & Threat Scorecard (5 Cols) -->
+        <section class="lg:col-span-5 flex flex-col space-y-6">
+
+            <!-- Dynamic Scan Status & Radar Container -->
+            <div id="radarSection" class="bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-xl relative overflow-hidden flex flex-col items-center justify-center min-h-[160px]">
+                
+                <!-- Scanning Radar Animation (Visible during active scan) -->
+                <div id="radarLoader" class="hidden flex flex-col items-center space-y-3 py-4">
+                    <div class="relative w-24 h-24 rounded-full border border-cyber-neonGreen/30 bg-cyber-bg flex items-center justify-center overflow-hidden shadow-neon-green">
+                        <div class="absolute inset-0 border border-cyber-neonGreen/20 rounded-full scale-75"></div>
+                        <div class="absolute inset-0 border border-cyber-neonGreen/20 rounded-full scale-50"></div>
+                        <div class="radar-sweep"></div>
+                        <i class="fa-solid fa-shield text-2xl text-cyber-neonGreen z-10"></i>
+                    </div>
+                    <p class="font-mono text-xs text-cyber-neonGreen animate-pulse">ANALYZING HEURISTICS & AI PATTERNS...</p>
+                </div>
+
+                <!-- Idle State Message -->
+                <div id="radarIdle" class="flex flex-col items-center text-center space-y-2 text-gray-400 py-6">
+                    <div class="w-12 h-12 rounded-full bg-cyber-bg border border-cyber-border flex items-center justify-center text-cyber-neonBlue">
+                        <i class="fa-solid fa-crosshairs text-xl"></i>
+                    </div>
+                    <p class="font-mono text-xs font-semibold text-gray-300">TACTICAL RADAR READY</p>
+                    <p class="text-[11px] font-mono text-gray-500 max-w-xs">Select a preset or input content to generate an immediate threat inspection report.</p>
+                </div>
+
+                <!-- Main Scorecard Results Panel (Hidden until scan complete) -->
+                <div id="scanResults" class="hidden w-full flex-col space-y-4">
+                    
+                    <!-- Threat Level Badge & Score Header -->
+                    <div id="scoreHeader" class="p-4 rounded-lg border flex items-center justify-between bg-cyber-bg">
+                        <div class="flex items-center space-x-3">
+                            <div id="scoreIconBg" class="w-12 h-12 rounded-lg flex items-center justify-center text-2xl">
+                                <i id="scoreIcon" class="fa-solid fa-shield-cat"></i>
+                            </div>
+                            <div>
+                                <div class="text-[10px] font-mono text-gray-400">ASSESSED RISK LEVEL</div>
+                                <div id="scoreVerdict" class="font-mono font-bold text-lg leading-tight">UNKNOWN</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] font-mono text-gray-400">THREAT INDEX</div>
+                            <div id="scoreNumber" class="font-mono text-2xl font-bold">0/100</div>
+                        </div>
+                    </div>
+
+                    <!-- Visual Progress Gauge -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-[10px] font-mono text-gray-400">
+                            <span>SAFE (0)</span>
+                            <span>SUSPICIOUS (40)</span>
+                            <span>CRITICAL (75+)</span>
+                        </div>
+                        <div class="w-full bg-cyber-bg h-3 rounded-full overflow-hidden border border-cyber-border p-0.5">
+                            <div id="scoreBar" class="h-full rounded-full transition-all duration-700 bg-cyber-neonGreen" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Detailed Indicators & Recommendations Breakdown -->
+            <div id="reportDetails" class="hidden flex-col space-y-4 bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-xl">
+                
+                <!-- Category Breakdown Tabs/Accordion -->
+                <div class="border-b border-cyber-border pb-3 flex items-center justify-between">
+                    <span class="font-mono text-xs font-bold text-white flex items-center space-x-2">
+                        <i class="fa-solid fa-list-check text-cyber-neonBlue"></i>
+                        <span>INSPECTION BREAKDOWN</span>
+                    </span>
+                    <span id="flagCountBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyber-border text-gray-300">0 Flags</span>
+                </div>
+
+                <!-- Detected Red Flags -->
+                <div class="space-y-2">
+                    <p class="text-[11px] font-mono text-gray-400">DETECTED ANOMALIES & INDICATORS:</p>
+                    <div id="flagList" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        <!-- Flag items inserted dynamically -->
+                    </div>
+                </div>
+
+                <!-- AI Verdict Explanation -->
+                <div class="bg-cyber-bg/80 border border-cyber-border rounded-lg p-3 space-y-1">
+                    <div class="flex items-center space-x-1.5 text-xs font-mono text-cyber-neonBlue">
+                        <i class="fa-solid fa-brain"></i>
+                        <span class="font-semibold">AI TACTICAL ANALYSIS SUMMARY:</span>
+                    </div>
+                    <p id="aiSummaryText" class="text-xs text-gray-300 font-sans leading-relaxed">
+                        No active inspection report loaded.
+                    </p>
+                </div>
+
+                <!-- Recommended Actions -->
+                <div class="space-y-2 pt-1">
+                    <p class="text-[11px] font-mono text-gray-400">TACTICAL DEFENSIVE RECOMMENDATIONS:</p>
+                    <div id="recommendationList" class="space-y-1.5 text-xs font-mono">
+                        <!-- Recommendations inserted dynamically -->
+                    </div>
+                </div>
+
+                <!-- Report Action Footer -->
+                <div class="pt-3 border-t border-cyber-border flex items-center justify-between gap-2">
+                    <button onclick="copyReportToClipboard()" class="flex-1 py-2 rounded bg-cyber-bg border border-cyber-border text-xs font-mono text-gray-300 hover:text-white hover:border-cyber-neonBlue transition flex items-center justify-center space-x-1.5">
+                        <i class="fa-solid fa-copy"></i>
+                        <span>Copy Report</span>
+                    </button>
+                    <button onclick="exportReportJSON()" class="flex-1 py-2 rounded bg-cyber-bg border border-cyber-border text-xs font-mono text-gray-300 hover:text-white hover:border-cyber-neonGreen transition flex items-center justify-center space-x-1.5">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Export Logs</span>
+                    </button>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Modal: Settings & Gemini Key Configuration -->
+    <div id="settingsModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-cyber-card border border-cyber-border rounded-xl max-w-md w-full p-6 shadow-2xl space-y-5">
+            <div class="flex items-center justify-between border-b border-cyber-border pb-3">
+                <div class="flex items-center space-x-2 text-white font-mono font-bold text-base">
+                    <i class="fa-solid fa-gear text-cyber-neonBlue"></i>
+                    <span>INSPECTION ENGINE SETTINGS</span>
+                </div>
+                <button onclick="toggleSettingsModal()" class="text-gray-400 hover:text-white text-lg">&times;</button>
+            </div>
+
+            <div class="space-y-4 text-xs font-mono">
+                <div>
+                    <label class="text-gray-300 block mb-1 font-semibold">Gemini API Key (Optional Override):</label>
+                    <input type="password" id="customApiKey" placeholder="Leave blank to use default runtime system key" class="w-full bg-cyber-bg border border-cyber-border rounded p-2.5 text-gray-200 focus:outline-none focus:border-cyber-neonBlue">
+                    <p class="text-[10px] text-gray-500 mt-1">If unprovided, OfferGuard uses built-in pattern heuristics + free fallback models.</p>
+                </div>
+
+                <div class="space-y-2 border-t border-cyber-border pt-3">
+                    <label class="text-gray-300 block font-semibold">Risk Sensitivity Threshold:</label>
+                    <div class="flex items-center space-x-3">
+                        <input type="range" id="sensitivityRange" min="1" max="5" value="3" class="w-full accent-cyber-neonBlue">
+                        <span id="sensitivityVal" class="text-cyber-neonBlue font-bold">Medium</span>
+                    </div>
+                </div>
+
+                <div class="space-y-2 border-t border-cyber-border pt-3">
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="autoAlertToggle" checked class="rounded bg-cyber-bg border-cyber-border text-cyber-neonBlue">
+                        <span class="text-gray-300">Play Audio Alarm on High Risk Detection</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2 border-t border-cyber-border">
+                <button onclick="toggleSettingsModal()" class="px-4 py-2 bg-cyber-bg border border-cyber-border rounded text-xs font-mono text-gray-300 hover:text-white">Close</button>
+                <button onclick="saveSettings()" class="px-4 py-2 bg-cyber-neonBlue text-cyber-bg font-bold rounded text-xs font-mono hover:opacity-90">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- Footer -->
+    <footer class="border-t border-cyber-border/40 py-3 text-center text-xs font-mono text-gray-500">
+        OfferGuard AI Tactical Cyber-Ops Inspector &bull; Autonomous Scambuster Protection Matrix
+    </footer>
+
+    <script>
+        /* ==========================================================================
+           STATE MANAGEMENT & CONSTANTS
+           ========================================================================== */
+        let currentMode = 'manual'; // 'manual' | 'auto'
+        let currentScanResult = null;
+        let isClipboardMonitoring = false;
+        let isStreamSimulating = false;
+        let streamInterval = null;
+        let clipboardInterval = null;
+        let lastClipboardText = '';
+        let streamIncidentCount = 0;
+        let userImageBase64 = null;
+
+        // Settings State
+        let settings = {
+            apiKey: '',
+            sensitivity: 3,
+            audioAlert: true
+        };
+
+        /* ==========================================================================
+           PRESET DATASETS
+           ========================================================================== */
+        const PRESETS = {
+            scam_job: {
+                text: "CONGRATULATIONS! You have been selected for a High-Paying Remote Assistant position at Apex Global Corp. Pay is $85/hr. No experience needed. We will mail you a check for $3,500 to buy equipment from our approved vendor. First, kindly pay the $150 refundable processing fee via Bitcoin or Telegram handle @ApexHRDept.",
+                url: "http://apex-global-hiring-now.free.nf/verify"
+            },
+            scam_sms: {
+                text: "ALERT: Your First Federal Account has been temporarily suspended due to unauthorized login attempts. Verify identity immediately to avoid $500 lock fee: https://bit.ly/bank-security-fix-auth",
+                url: "https://bit.ly/bank-security-fix-auth"
+            },
+            legit: {
+                text: "Hi Alex, following up on our interview last Tuesday. We are delighted to extend a formal offer for the Frontend Developer role at Acme Software Solutions. Attached is the offer letter. You can review the benefits on our official portal at acmesoftware.com/careers.",
+                url: "https://acmesoftware.com/careers"
+            }
+        };
+
+        const SIMULATED_STREAM_INCIDENTS = [
+            {
+                type: 'high_risk',
+                source: 'SMS / +1 (888) 923-9912',
+                text: 'URGENT: Your Crypto Wallet has 1.4 ETH pending withdrawal. Click here to cancel if not you: https://trustwallet-verify-sec.xyz/login'
+            },
+            {
+                type: 'med_risk',
+                source: 'WhatsApp / Unknown HR',
+                text: 'Hello! I saw your profile on LinkedIn. Part-time online job rating products. Earn $300-$1000 daily. Contact Telegram @HR_Recruiter_99'
+            },
+            {
+                type: 'safe',
+                source: 'Email / hr@techinnovations.io',
+                text: 'Thank you for submitting your application for Senior DevOps Engineer. We would like to schedule a 30-minute technical screening call.'
+            },
+            {
+                type: 'high_risk',
+                source: 'Telegram Bot Alert',
+                text: 'CLAIM FREE AIRDROP: You won 5,000 USDT! Connect wallet now at https://free-usdt-airdrop-claim.top'
+            }
+        ];
+
+        /* ==========================================================================
+           INITIALIZATION & TABS
+           ========================================================================== */
+        window.onload = function() {
+            initDragAndDrop();
+            updateTicker("System initialized. Select preset or paste content to execute threat analysis.");
+        };
+
+        function switchMode(mode) {
+            currentMode = mode;
+            const manualPanel = document.getElementById('manualPanel');
+            const autoPanel = document.getElementById('autoPanel');
+            const tabManualBtn = document.getElementById('tabManualBtn');
+            const tabAutoBtn = document.getElementById('tabAutoBtn');
+
+            if (mode === 'manual') {
+                manualPanel.classList.remove('hidden');
+                manualPanel.classList.add('flex');
+                autoPanel.classList.add('hidden');
+                autoPanel.classList.remove('flex');
+
+                tabManualBtn.className = "flex-1 py-2.5 px-4 rounded-lg font-mono text-xs sm:text-sm font-semibold flex items-center justify-center space-x-2 transition-all bg-cyber-border text-white shadow-md";
+                tabAutoBtn.className = "flex-1 py-2.5 px-4 rounded-lg font-mono text-xs sm:text-sm font-semibold flex items-center justify-center space-x-2 transition-all text-gray-400 hover:text-white hover:bg-cyber-bg/50";
+            } else {
+                autoPanel.classList.remove('hidden');
+                autoPanel.classList.add('flex');
+                manualPanel.classList.add('hidden');
+                manualPanel.classList.remove('flex');
+
+                tabAutoBtn.className = "flex-1 py-2.5 px-4 rounded-lg font-mono text-xs sm:text-sm font-semibold flex items-center justify-center space-x-2 transition-all bg-cyber-border text-white shadow-md";
+                tabManualBtn.className = "flex-1 py-2.5 px-4 rounded-lg font-mono text-xs sm:text-sm font-semibold flex items-center justify-center space-x-2 transition-all text-gray-400 hover:text-white hover:bg-cyber-bg/50";
+            }
+        }
+
+        /* ==========================================================================
+           MANUAL INPUT & PRESET HANDLERS
+           ========================================================================== */
+        function loadPreset(key) {
+            if (PRESETS[key]) {
+                document.getElementById('manualText').value = PRESETS[key].text;
+                document.getElementById('manualUrl').value = PRESETS[key].url || '';
+                showToast(`Loaded ${key.replace('_', ' ').toUpperCase()} sample`, 'info');
+            }
+        }
+
+        function clearManualInputs() {
+            document.getElementById('manualText').value = '';
+            document.getElementById('manualUrl').value = '';
+            removeImage();
+            showToast('Manual inputs cleared', 'info');
+        }
+
+        /* ==========================================================================
+           DRAG & DROP & OCR (VISION / OCR FALLBACK)
+           ========================================================================== */
+        function initDragAndDrop() {
+            const dropZone = document.getElementById('dropZone');
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.add('border-cyber-neonBlue', 'bg-cyber-neonBlue/10');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.remove('border-cyber-neonBlue', 'bg-cyber-neonBlue/10');
+                }, false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files.length > 0 && files[0].type.startsWith('image/')) {
+                    processUploadedImage(files[0]);
+                }
+            }, false);
+
+            dropZone.addEventListener('click', (e) => {
+                if (e.target.closest('#imagePreviewContainer')) return;
+                document.getElementById('fileInput').click();
+            });
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) processUploadedImage(file);
+        }
+
+        function processUploadedImage(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                userImageBase64 = e.target.result;
+                document.getElementById('dropZoneContent').classList.add('hidden');
+                document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                document.getElementById('imagePreview').src = userImageBase64;
+
+                // Perform Local OCR via Tesseract.js as rapid pre-extraction
+                runLocalOCR(file);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage(e) {
+            if (e) e.stopPropagation();
+            userImageBase64 = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('imagePreview').src = '';
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+            document.getElementById('dropZoneContent').classList.remove('hidden');
+        }
+
+        async function runLocalOCR(file) {
+            const ocrStatus = document.getElementById('ocrStatus');
+            ocrStatus.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Running OCR text extraction...`;
+            
+            try {
+                if (window.Tesseract) {
+                    const worker = await Tesseract.createWorker();
+                    await worker.loadLanguage('eng');
+                    await worker.initialize('eng');
+                    const ret = await worker.recognize(file);
+                    await worker.terminate();
+
+                    if (ret.data && ret.data.text.trim().length > 0) {
+                        const existing = document.getElementById('manualText').value;
+                        document.getElementById('manualText').value = (existing ? existing + "\n\n" : "") + "[EXTRACTED OCR TEXT]:\n" + ret.data.text.trim();
+                        ocrStatus.innerHTML = `<i class="fa-solid fa-check text-cyber-neonGreen mr-1"></i> Text extracted from image`;
+                        showToast('OCR Text successfully extracted into text area', 'success');
+                    } else {
+                        ocrStatus.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-cyber-neonYellow mr-1"></i> Low OCR text found`;
+                    }
+                } else {
+                    ocrStatus.innerHTML = `<i class="fa-solid fa-eye text-cyber-neonBlue mr-1"></i> Ready for Gemini Vision Analysis`;
+                }
+            } catch (err) {
+                console.warn('OCR Fallback:', err);
+                ocrStatus.innerHTML = `<i class="fa-solid fa-eye text-cyber-neonBlue mr-1"></i> Ready for AI Vision inspection`;
+            }
+        }
+
+        /* ==========================================================================
+           HEURISTIC PATTERN ENGINE & GEMINI API INTEGRATION
+           ========================================================================== */
+        
+        // Fast local pattern-matching heuristic engine
+        function runLocalHeuristics(text, url = '') {
+            const flags = [];
+            let threatScore = 0;
+
+            const lowerText = text.toLowerCase();
+            const lowerUrl = url.toLowerCase();
+
+            // High Risk Payment Flags
+            if (/bitcoin|crypto|usdt|telegram|wire transfer|gift card|zelle|cashapp/i.test(text)) {
+                flags.push({
+                    severity: 'danger',
+                    label: 'Unconventional / Irreversible Payment Method',
+                    desc: 'Requests payment via Cryptocurrency, Wire, Gift Cards, or Telegram handles.'
+                });
+                threatScore += 30;
+            }
+
+            // Upfront Money / Fee Demand
+            if (/processing fee|equipment check|deposit|refundable fee|pay first|buying equipment/i.test(text)) {
+                flags.push({
+                    severity: 'danger',
+                    label: 'Upfront Fee / Fake Check Scheme',
+                    desc: 'Demands upfront payment for equipment, training, or application clearance.'
+                });
+                threatScore += 35;
+            }
+
+            // High Pay / No Experience Urgency
+            if (/no experience|guaranteed income|\$85\/hr|\$1000 daily|congratulations! you have been selected/i.test(text)) {
+                flags.push({
+                    severity: 'warning',
+                    label: 'Unrealistic Compensation / Fake Urgency',
+                    desc: 'Promises excessive compensation relative to experience requirements.'
+                });
+                threatScore += 20;
+            }
+
+            // Urgent Suspension / Account Security Phishing
+            if (/account suspended|unauthorized login|verify immediately|avoid lock fee|temporarily locked/i.test(text)) {
+                flags.push({
+                    severity: 'danger',
+                    label: 'Urgent Security Threat / Urgency Hook',
+                    desc: 'Uses psychological urgency & fear tactics to force immediate link clicking.'
+                });
+                threatScore += 30;
+            }
+
+            // URL Anomaly Flags
+            if (url || /https?:\/\/[^\s]+/i.test(text)) {
+                const foundUrl = url || (text.match(/https?:\/\/[^\s]+/i) || [])[0] || '';
+                if (/bit\.ly|tinyurl|free\.nf|top|xyz|cc|click|claim/i.test(foundUrl)) {
+                    flags.push({
+                        severity: 'danger',
+                        label: 'Suspicious / Shortened Top-Level Domain',
+                        desc: `Destination URL uses high-risk TLD or obfuscated link shortener: ${foundUrl}`
+                    });
+                    threatScore += 25;
+                }
+            }
+
+            // Cap threat score at 99
+            threatScore = Math.min(threatScore, 98);
+
+            // Determine verdict
+            let verdict = 'SAFE / LOW RISK';
+            if (threatScore >= 70) verdict = 'CRITICAL SCAM THREAT';
+            else if (threatScore >= 35) verdict = 'SUSPICIOUS OFFER / HIGH RISK';
+
+            return {
+                score: threatScore,
+                verdict: verdict,
+                flags: flags,
+                summary: flags.length > 0 
+                    ? `Local Heuristic Engine detected ${flags.length} high-risk anomaly indicators commonly associated with employment or financial scams.`
+                    : `No critical scam signatures or known malicious patterns detected in content structure.`
+            };
+        }
+
+        // Deep AI analysis with Gemini API
+        async function runGeminiAnalysis(text, url, imageBase64) {
+            const systemPrompt = `You are OfferGuard AI, an elite cyber-threat intelligence analyst specializing in scam detection, job offer phishing, fake checks, and financial fraud. 
+Analyze the user's input and respond ONLY with a structured JSON matching this schema:
+{
+  "score": <number 0 to 100 representing threat level>,
+  "verdict": "<SAFE / LOW RISK | SUSPICIOUS / HIGH RISK | CRITICAL SCAM THREAT>",
+  "summary": "<1-2 sentence tactical analysis summary>",
+  "flags": [
+    {
+      "severity": "<danger | warning | info>",
+      "label": "<Short Title>",
+      "desc": "<Description of the risk>"
+    }
+  ],
+  "recommendations": [
+    "<Actionable safety step 1>",
+    "<Actionable safety step 2>"
+  ]
+}`;
+
+            const userPrompt = `INSPECT CONTENT FOR THREATS:
+Text: ${text || 'N/A'}
+URL: ${url || 'N/A'}
+${imageBase64 ? '[IMAGE ATTACHED: Inspect screenshot OCR/Visual elements]' : ''}`;
+
+            const apiKey = settings.apiKey || "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const parts = [{ text: userPrompt }];
+
+            if (imageBase64) {
+                const base64Data = imageBase64.split(',')[1];
+                const mimeType = imageBase64.split(';')[0].split(':')[1];
+                if (base64Data && mimeType) {
+                    parts.push({
+                        inlineData: { mimeType: mimeType, data: base64Data }
+                    });
+                }
+            }
+
+            const payload = {
+                contents: [{ parts: parts }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: { responseMimeType: "application/json" }
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API response status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            return JSON.parse(jsonText);
+        }
+
+        /* ==========================================================================
+           MAIN EXECUTION CONTROLLER
+           ========================================================================== */
+        async function runManualAnalysis() {
+            const text = document.getElementById('manualText').value.trim();
+            const url = document.getElementById('manualUrl').value.trim();
+
+            if (!text && !url && !userImageBase64) {
+                showToast('Please enter text, URL, or upload a screenshot to inspect', 'warning');
+                return;
+            }
+
+            // Show UI Loader Radar
+            showRadarLoading(true);
+            updateTicker("Executing deep threat inspection matrix...");
+
+            try {
+                let result = null;
+
+                // Attempt Gemini API call
+                try {
+                    result = await runGeminiAnalysis(text, url, userImageBase64);
+                    updateEngineBadge('Gemini 3 Flash (AI Live)');
+                } catch (geminiErr) {
+                    console.warn("Falling back to local heuristic matrix:", geminiErr);
+                    result = runLocalHeuristics(text, url);
+                    updateEngineBadge('Local Heuristics Engine');
+                    showToast('Using Local Pattern Engine (API offline or unconfigured)', 'info');
+                }
+
+                // Default recommendations if missing
+                if (!result.recommendations || result.recommendations.length === 0) {
+                    result.recommendations = generateDefaultRecommendations(result.score);
+                }
+
+                currentScanResult = result;
+                renderScanResults(result);
+
+                if (result.score >= 70 && settings.audioAlert) {
+                    playAlarmSound();
+                }
+
+                updateTicker(`Inspection complete. Threat Score: ${result.score}/100 [${result.verdict}]`);
+            } catch (err) {
+                console.error("Scan Error:", err);
+                showToast('Error conducting threat inspection', 'error');
+            } finally {
+                showRadarLoading(false);
+            }
+        }
+
+        /* ==========================================================================
+           UI RENDERING HELPERS
+           ========================================================================== */
+        function showRadarLoading(isLoading) {
+            const loader = document.getElementById('radarLoader');
+            const idle = document.getElementById('radarIdle');
+            const results = document.getElementById('scanResults');
+
+            if (isLoading) {
+                loader.classList.remove('hidden');
+                idle.classList.add('hidden');
+                results.classList.add('hidden');
+            } else {
+                loader.classList.add('hidden');
+            }
+        }
+
+        function renderScanResults(result) {
+            document.getElementById('radarIdle').classList.add('hidden');
+            document.getElementById('scanResults').classList.remove('hidden');
+            document.getElementById('scanResults').classList.add('flex');
+            document.getElementById('reportDetails').classList.remove('hidden');
+            document.getElementById('reportDetails').classList.add('flex');
+
+            const scoreHeader = document.getElementById('scoreHeader');
+            const scoreIconBg = document.getElementById('scoreIconBg');
+            const scoreIcon = document.getElementById('scoreIcon');
+            const scoreVerdict = document.getElementById('scoreVerdict');
+            const scoreNumber = document.getElementById('scoreNumber');
+            const scoreBar = document.getElementById('scoreBar');
+
+            scoreNumber.textContent = `${result.score}/100`;
+            scoreVerdict.textContent = result.verdict;
+            scoreBar.style.width = `${result.score}%`;
+
+            // Style depending on risk level
+            if (result.score >= 70) {
+                scoreHeader.className = "p-4 rounded-lg border border-cyber-neonRed/50 bg-cyber-neonRed/10 text-cyber-neonRed shadow-neon-red";
+                scoreIconBg.className = "w-12 h-12 rounded-lg bg-cyber-neonRed/20 flex items-center justify-center text-cyber-neonRed";
+                scoreIcon.className = "fa-solid fa-triangle-exclamation text-2xl";
+                scoreBar.className = "h-full rounded-full transition-all duration-700 bg-cyber-neonRed";
+            } else if (result.score >= 35) {
+                scoreHeader.className = "p-4 rounded-lg border border-cyber-neonYellow/50 bg-cyber-neonYellow/10 text-cyber-neonYellow shadow-neon-yellow";
+                scoreIconBg.className = "w-12 h-12 rounded-lg bg-cyber-neonYellow/20 flex items-center justify-center text-cyber-neonYellow";
+                scoreIcon.className = "fa-solid fa-triangle-exclamation text-2xl";
+                scoreBar.className = "h-full rounded-full transition-all duration-700 bg-cyber-neonYellow";
+            } else {
+                scoreHeader.className = "p-4 rounded-lg border border-cyber-neonGreen/50 bg-cyber-neonGreen/10 text-cyber-neonGreen shadow-neon-green";
+                scoreIconBg.className = "w-12 h-12 rounded-lg bg-cyber-neonGreen/20 flex items-center justify-center text-cyber-neonGreen";
+                scoreIcon.className = "fa-solid fa-shield-check text-2xl";
+                scoreBar.className = "h-full rounded-full transition-all duration-700 bg-cyber-neonGreen";
+            }
+
+            // Flag Indicators
+            const flagList = document.getElementById('flagList');
+            const flagCountBadge = document.getElementById('flagCountBadge');
+            flagList.innerHTML = '';
+
+            const flags = result.flags || [];
+            flagCountBadge.textContent = `${flags.length} Indicators`;
+
+            if (flags.length === 0) {
+                flagList.innerHTML = `
+                    <div class="text-xs font-mono text-gray-400 italic bg-cyber-bg p-2.5 rounded border border-cyber-border">
+                        <i class="fa-solid fa-check-circle text-cyber-neonGreen mr-1"></i> No high-risk scam indicators detected in input.
+                    </div>`;
+            } else {
+                flags.forEach(flag => {
+                    const flagEl = document.createElement('div');
+                    let borderCol = 'border-cyber-border';
+                    let textCol = 'text-gray-300';
+                    let icon = 'fa-solid fa-circle-info text-cyber-neonBlue';
+
+                    if (flag.severity === 'danger') {
+                        borderCol = 'border-cyber-neonRed/40 bg-cyber-neonRed/5';
+                        textCol = 'text-cyber-neonRed';
+                        icon = 'fa-solid fa-circle-xmark text-cyber-neonRed';
+                    } else if (flag.severity === 'warning') {
+                        borderCol = 'border-cyber-neonYellow/40 bg-cyber-neonYellow/5';
+                        textCol = 'text-cyber-neonYellow';
+                        icon = 'fa-solid fa-triangle-exclamation text-cyber-neonYellow';
+                    }
+
+                    flagEl.className = `p-2.5 rounded border ${borderCol} space-y-1 font-mono text-xs`;
+                    flagEl.innerHTML = `
+                        <div class="flex items-center space-x-2 font-bold ${textCol}">
+                            <i class="${icon}"></i>
+                            <span>${flag.label}</span>
+                        </div>
+                        <p class="text-[11px] text-gray-400 font-sans pl-5">${flag.desc}</p>
+                    `;
+                    flagList.appendChild(flagEl);
+                });
+            }
+
+            // Summary
+            document.getElementById('aiSummaryText').textContent = result.summary || 'No detailed analysis summary available.';
+
+            // Recommendations
+            const recList = document.getElementById('recommendationList');
+            recList.innerHTML = '';
+            (result.recommendations || []).forEach(rec => {
+                const recEl = document.createElement('div');
+                recEl.className = "flex items-start space-x-2 text-gray-300 bg-cyber-bg/50 p-2 rounded border border-cyber-border/60";
+                recEl.innerHTML = `
+                    <i class="fa-solid fa-shield-halved text-cyber-neonBlue mt-0.5 text-xs"></i>
+                    <span>${rec}</span>
+                `;
+                recList.appendChild(recEl);
+            });
+        }
+
+        function generateDefaultRecommendations(score) {
+            if (score >= 70) {
+                return [
+                    "DO NOT send money, cryptocurrency, or gift cards under any circumstances.",
+                    "Never deposit checks sent by unverified employers or strangers.",
+                    "Block the sender and report the incident to cybersecurity authority / FTC."
+                ];
+            } else if (score >= 35) {
+                return [
+                    "Verify company domain independently via official web contact channels.",
+                    "Refuse requests to move communication to personal messaging apps like Telegram/WhatsApp.",
+                    "Cross-check job position on company's official LinkedIn page."
+                ];
+            } else {
+                return [
+                    "Maintain standard digital vigilance and protect sensitive credentials.",
+                    "Verify official email headers before sharing personal employee documentation."
+                ];
+            }
+        }
+
+        /* ==========================================================================
+           AUTO-MONITORING & SIMULATED STREAM LOGIC
+           ========================================================================== */
+        
+        // Toggle System Clipboard Auto-Sniffer
+        async function toggleClipboardMonitoring() {
+            const toggle = document.getElementById('clipToggle');
+            const badgeDot = document.getElementById('autoMonitorDot');
+            const badgeText = document.getElementById('autoMonitorText');
+
+            if (toggle.checked) {
+                try {
+                    // Check browser permission support
+                    if (navigator.clipboard && navigator.clipboard.readText) {
+                        isClipboardMonitoring = true;
+                        badgeDot.className = "w-2 h-2 rounded-full bg-cyber-neonGreen animate-ping";
+                        badgeText.textContent = "SNIFFER ACTIVE";
+                        badgeText.className = "text-cyber-neonGreen font-semibold";
+
+                        showToast('Clipboard sniffer activated. Copy text to scan automatically.', 'success');
+                        
+                        clipboardInterval = setInterval(async () => {
+                            try {
+                                const text = await navigator.clipboard.readText();
+                                if (text && text !== lastClipboardText && text.trim().length > 15) {
+                                    lastClipboardText = text;
+                                    handleAutoDetectedIncident('Clipboard Capture', text);
+                                }
+                            } catch (e) {
+                                // Ignore background permission focus errors
+                            }
+                        }, 2500);
+                    } else {
+                        throw new Error('Clipboard API unavailable');
+                    }
+                } catch (err) {
+                    toggle.checked = false;
+                    showToast('Clipboard access denied or unsupported by browser iframe.', 'warning');
+                }
+            } else {
+                isClipboardMonitoring = false;
+                clearInterval(clipboardInterval);
+                badgeDot.className = "w-2 h-2 rounded-full bg-gray-500";
+                badgeText.textContent = "OFF";
+                badgeText.className = "text-gray-400 font-semibold";
+                showToast('Clipboard sniffer deactivated', 'info');
+            }
+        }
+
+        // Toggle Live Stream Simulation
+        function toggleStreamSimulation() {
+            const btn = document.getElementById('simStreamBtn');
+            if (!isStreamSimulating) {
+                isStreamSimulating = true;
+                btn.innerHTML = `<i class="fa-solid fa-pause mr-1"></i>Pause Stream`;
+                btn.className = "px-3 py-1.5 rounded-lg text-xs font-mono border border-cyber-neonRed/40 bg-cyber-neonRed/10 text-cyber-neonRed hover:bg-cyber-neonRed/20 transition";
+                
+                document.getElementById('autoBadgeCount').classList.remove('hidden');
+
+                // Periodically inject random incident
+                streamInterval = setInterval(() => {
+                    const randomIdx = Math.floor(Math.random() * SIMULATED_STREAM_INCIDENTS.length);
+                    const incident = SIMULATED_STREAM_INCIDENTS[randomIdx];
+                    handleAutoDetectedIncident(incident.source, incident.text);
+                }, 7000);
+
+                showToast('Live Simulated Incident Stream Started', 'success');
+            } else {
+                isStreamSimulating = false;
+                clearInterval(streamInterval);
+                btn.innerHTML = `<i class="fa-solid fa-play mr-1"></i>Start Stream`;
+                btn.className = "px-3 py-1.5 rounded-lg text-xs font-mono border border-cyber-neonGreen/40 bg-cyber-neonGreen/10 text-cyber-neonGreen hover:bg-cyber-neonGreen/20 transition";
+                showToast('Stream simulation paused', 'info');
+            }
+        }
+
+        function injectSimulatedMessage(type) {
+            let incident;
+            if (type === 'high_risk') {
+                incident = SIMULATED_STREAM_INCIDENTS[0];
+            } else if (type === 'med_risk') {
+                incident = SIMULATED_STREAM_INCIDENTS[1];
+            } else {
+                incident = SIMULATED_STREAM_INCIDENTS[2];
+            }
+            handleAutoDetectedIncident(incident.source, incident.text);
+        }
+
+        function handleAutoDetectedIncident(source, text) {
+            streamIncidentCount++;
+            document.getElementById('feedCount').textContent = streamIncidentCount;
+            document.getElementById('streamEmptyState')?.classList.add('hidden');
+
+            // Quick heuristic scan
+            const analysis = runLocalHeuristics(text);
+
+            // Append item to stream list
+            const container = document.getElementById('streamContainer');
+            const item = document.createElement('div');
+
+            let badgeBg = 'bg-cyber-neonGreen/10 border-cyber-neonGreen/30 text-cyber-neonGreen';
+            let badgeText = 'SAFE';
+
+            if (analysis.score >= 70) {
+                badgeBg = 'bg-cyber-neonRed/20 border-cyber-neonRed/40 text-cyber-neonRed animate-pulse';
+                badgeText = 'CRITICAL THREAT';
+            } else if (analysis.score >= 35) {
+                badgeBg = 'bg-cyber-neonYellow/20 border-cyber-neonYellow/40 text-cyber-neonYellow';
+                badgeText = 'SUSPICIOUS';
+            }
+
+            item.className = "bg-cyber-bg border border-cyber-border rounded-lg p-3 space-y-2 font-mono text-xs shadow-md transition hover:border-cyber-neonBlue";
+            item.innerHTML = `
+                <div class="flex items-center justify-between border-b border-cyber-border/40 pb-1.5">
+                    <span class="text-gray-400 flex items-center space-x-1">
+                        <i class="fa-solid fa-rss text-cyber-neonBlue text-[10px]"></i>
+                        <span class="font-bold text-gray-200">${source}</span>
+                    </span>
+                    <span class="px-2 py-0.5 rounded border text-[10px] font-bold ${badgeBg}">
+                        ${badgeText} (${analysis.score}/100)
+                    </span>
+                </div>
+                <p class="text-gray-300 line-clamp-2 font-sans">${text}</p>
+                <div class="flex items-center justify-between pt-1 text-[10px]">
+                    <span class="text-gray-500">${new Date().toLocaleTimeString()}</span>
+                    <button onclick="inspectFeedItem('${encodeURIComponent(text)}')" class="text-cyber-neonBlue hover:underline flex items-center space-x-1">
+                        <i class="fa-solid fa-microscope"></i>
+                        <span>Load Detailed Scan</span>
+                    </button>
+                </div>
+            `;
+
+            container.prepend(item);
+
+            updateTicker(`Auto-Monitored Event Detected: [${badgeText}] from ${source}`);
+
+            if (analysis.score >= 70) {
+                showToast(`HIGH THREAT DETECTED in Auto Feed: ${source}`, 'error');
+                if (settings.audioAlert) playAlarmSound();
+            }
+        }
+
+        function inspectFeedItem(encodedText) {
+            const text = decodeURIComponent(encodedText);
+            document.getElementById('manualText').value = text;
+            switchMode('manual');
+            runManualAnalysis();
+        }
+
+        function clearStreamFeed() {
+            const container = document.getElementById('streamContainer');
+            container.innerHTML = `
+                <div id="streamEmptyState" class="h-full flex flex-col items-center justify-center text-gray-500 font-mono text-xs py-10">
+                    <i class="fa-solid fa-satellite-dish text-3xl mb-2 text-cyber-border"></i>
+                    <p>Live Monitoring Feed Idle.</p>
+                </div>
+            `;
+            streamIncidentCount = 0;
+            document.getElementById('feedCount').textContent = '0';
+            showToast('Live stream feed cleared', 'info');
+        }
+
+        /* ==========================================================================
+           MODALS, EXPORTS & UTILITY FUNCTIONS
+           ========================================================================== */
+        function toggleSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function saveSettings() {
+            settings.apiKey = document.getElementById('customApiKey').value.trim();
+            settings.audioAlert = document.getElementById('autoAlertToggle').checked;
+            toggleSettingsModal();
+            updateEngineBadge(settings.apiKey ? 'Custom Gemini API Key' : 'Gemini AI / Hybrid');
+            showToast('Settings saved successfully', 'success');
+        }
+
+        function updateEngineBadge(text) {
+            document.getElementById('engineStatusText').textContent = text;
+        }
+
+        function updateTicker(msg) {
+            document.getElementById('liveTickerText').textContent = msg;
+        }
+
+        function copyReportToClipboard() {
+            if (!currentScanResult) return;
+            const text = `OFFERGUARD AI THREAT REPORT:
+Score: ${currentScanResult.score}/100 [${currentScanResult.verdict}]
+Summary: ${currentScanResult.summary}
+Flags Detected: ${currentScanResult.flags?.length || 0}
+Timestamp: ${new Date().toLocaleString()}`;
+
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Report copied to clipboard', 'success');
+            }).catch(() => {
+                // Fallback execCommand
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('Report copied to clipboard', 'success');
+            });
+        }
+
+        function exportReportJSON() {
+            if (!currentScanResult) return;
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentScanResult, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `offerguard_threat_report_${Date.now()}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('JSON log report exported', 'success');
+        }
+
+        function playAlarmSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.3);
+            } catch (e) {
+                // Audio Context prohibited before user interaction
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+
+            let borderCol = 'border-cyber-neonBlue text-cyber-neonBlue';
+            let icon = 'fa-solid fa-circle-info';
+
+            if (type === 'success') {
+                borderCol = 'border-cyber-neonGreen text-cyber-neonGreen';
+                icon = 'fa-solid fa-circle-check';
+            } else if (type === 'warning') {
+                borderCol = 'border-cyber-neonYellow text-cyber-neonYellow';
+                icon = 'fa-solid fa-triangle-exclamation';
+            } else if (type === 'error') {
+                borderCol = 'border-cyber-neonRed text-cyber-neonRed';
+                icon = 'fa-solid fa-circle-xmark';
+            }
+
+            toast.className = `pointer-events-auto bg-cyber-card border ${borderCol} px-4 py-2.5 rounded-lg shadow-xl font-mono text-xs flex items-center space-x-2 transition-all duration-300 opacity-0 transform translate-y-2`;
+            toast.innerHTML = `<i class="${icon}"></i><span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('opacity-0', 'translate-y-2');
+            }, 10);
+
+            // Remove
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+    </script>
+</body>
+</html>

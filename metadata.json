@@ -1,0 +1,6 @@
+{
+  "name": "Offer AI",
+  "description": "Fake Offer Letter & Phishing Inspector",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
